@@ -2,6 +2,7 @@ using Microsoft.AnalysisServices;
 using Microsoft.AnalysisServices.Tabular;
 using Microsoft.Identity.Client;
 using Tabularcraft.Sidecar.Models;
+using TomServer = Microsoft.AnalysisServices.Tabular.Server;
 
 namespace Tabularcraft.Sidecar.Services;
 
@@ -13,7 +14,7 @@ namespace Tabularcraft.Sidecar.Services;
 public sealed class AasConnectionService : IDisposable
 {
     private readonly object _lock = new();
-    private Server? _server;
+    private TomServer? _server;
     private ConnectRequest? _config;
 
     // -------------------------------------------------------------------------
@@ -28,7 +29,7 @@ public sealed class AasConnectionService : IDisposable
             DisconnectCore();
 
             var connectionString = BuildConnectionString(request);
-            _server = new Server();
+            _server = new TomServer();
             _server.Connect(connectionString);
             _config = request;
         }
@@ -89,7 +90,7 @@ public sealed class AasConnectionService : IDisposable
         lock (_lock)
         {
             var db = GetDatabase(databaseName);
-            db.Model.RequestRefresh(RefreshType.Full);
+            db.Model.RequestRefresh(Microsoft.AnalysisServices.Tabular.RefreshType.Full);
             db.Model.SaveChanges();
         }
     }
@@ -99,7 +100,7 @@ public sealed class AasConnectionService : IDisposable
         lock (_lock)
         {
             var tbl = GetTable(databaseName, tableName);
-            tbl.RequestRefresh(RefreshType.Full);
+            tbl.RequestRefresh(Microsoft.AnalysisServices.Tabular.RefreshType.Full);
             tbl.Model.SaveChanges();
         }
     }
@@ -111,7 +112,7 @@ public sealed class AasConnectionService : IDisposable
             var tbl = GetTable(databaseName, tableName);
             var partition = tbl.Partitions.Find(partitionName)
                 ?? throw new InvalidOperationException($"Partition '{partitionName}' not found in table '{tableName}'.");
-            partition.RequestRefresh(RefreshType.Full);
+            partition.RequestRefresh(Microsoft.AnalysisServices.Tabular.RefreshType.Full);
             tbl.Model.SaveChanges();
         }
     }
@@ -179,14 +180,20 @@ public sealed class AasConnectionService : IDisposable
         {
             AssertConnected();
             // Execute via XMLA using the underlying Server object
-            var result = _server!.Execute(script);
-            if (result.ContainsErrors)
+            var results = _server!.Execute(script);
+            var messages = results
+                .Cast<XmlaResult>()
+                .SelectMany(r => r.Messages.OfType<XmlaMessage>())
+                .Select(m => m.Description)
+                .ToList();
+
+            if (results.ContainsErrors)
             {
-                var errors = string.Join("; ", result.Messages.OfType<XmlaMessage>().Select(m => m.Description));
+                var errors = string.Join("; ", messages);
                 throw new InvalidOperationException($"TMSL execution failed: {errors}");
             }
-            return result.Messages.Count > 0
-                ? string.Join("\n", result.Messages.OfType<XmlaMessage>().Select(m => m.Description))
+            return messages.Count > 0
+                ? string.Join("\n", messages)
                 : "OK";
         }
     }
