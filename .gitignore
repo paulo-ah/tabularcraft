@@ -1,0 +1,24 @@
+# VS Code extension
+node_modules/
+out/
+*.vsix
+.vscode-test/
+extension/.vscode/
+
+# .NET sidecar
+sidecar/bin/
+sidecar/obj/
+sidecar/*.user
+
+# Environment
+.env
+.env.local
+*.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

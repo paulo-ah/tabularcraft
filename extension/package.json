@@ -1,0 +1,156 @@
+{
+  "name": "tabularcraft",
+  "displayName": "Tabularcraft",
+  "description": "Manage Azure Analysis Services tabular models from VS Code",
+  "version": "0.1.0",
+  "publisher": "maersk-pda",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "keywords": ["Azure Analysis Services", "AAS", "TOM", "XMLA", "DAX", "tabular"],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "tabularcraft.connect",
+        "title": "Connect to AAS",
+        "category": "Tabularcraft",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "tabularcraft.disconnect",
+        "title": "Disconnect",
+        "category": "Tabularcraft",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "tabularcraft.refreshTree",
+        "title": "Refresh",
+        "category": "Tabularcraft",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "tabularcraft.processDatabase",
+        "title": "Process Database (Full)",
+        "category": "Tabularcraft",
+        "icon": "$(run-all)"
+      },
+      {
+        "command": "tabularcraft.processTable",
+        "title": "Process Table (Full)",
+        "category": "Tabularcraft",
+        "icon": "$(run)"
+      },
+      {
+        "command": "tabularcraft.processPartition",
+        "title": "Process Partition (Full)",
+        "category": "Tabularcraft",
+        "icon": "$(run)"
+      },
+      {
+        "command": "tabularcraft.processAdd",
+        "title": "ProcessAdd (Incremental, TMSL)",
+        "category": "Tabularcraft",
+        "icon": "$(add)"
+      },
+      {
+        "command": "tabularcraft.openMeasureEditor",
+        "title": "Open Measure Editor",
+        "category": "Tabularcraft",
+        "icon": "$(symbol-function)"
+      },
+      {
+        "command": "tabularcraft.openTmslConsole",
+        "title": "Open TMSL Console",
+        "category": "Tabularcraft",
+        "icon": "$(terminal)"
+      }
+    ],
+    "views": {
+      "tabularcraft-panel": [
+        {
+          "id": "tabularcraft.modelTree",
+          "name": "Model",
+          "when": "true"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "tabularcraft-panel",
+          "title": "Tabularcraft",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "tabularcraft.connect",
+          "when": "view == tabularcraft.modelTree",
+          "group": "navigation"
+        },
+        {
+          "command": "tabularcraft.disconnect",
+          "when": "view == tabularcraft.modelTree && tabularcraft.connected",
+          "group": "navigation"
+        },
+        {
+          "command": "tabularcraft.refreshTree",
+          "when": "view == tabularcraft.modelTree && tabularcraft.connected",
+          "group": "navigation"
+        },
+        {
+          "command": "tabularcraft.openTmslConsole",
+          "when": "view == tabularcraft.modelTree && tabularcraft.connected",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "tabularcraft.processDatabase",
+          "when": "view == tabularcraft.modelTree && viewItem == database",
+          "group": "process"
+        },
+        {
+          "command": "tabularcraft.processTable",
+          "when": "view == tabularcraft.modelTree && viewItem == table",
+          "group": "process"
+        },
+        {
+          "command": "tabularcraft.openMeasureEditor",
+          "when": "view == tabularcraft.modelTree && viewItem == table",
+          "group": "measures"
+        },
+        {
+          "command": "tabularcraft.processPartition",
+          "when": "view == tabularcraft.modelTree && viewItem == partition",
+          "group": "process"
+        },
+        {
+          "command": "tabularcraft.processAdd",
+          "when": "view == tabularcraft.modelTree && viewItem == partition",
+          "group": "process"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.3.0"
+  }
+}

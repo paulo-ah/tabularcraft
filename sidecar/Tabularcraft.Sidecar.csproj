@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Tabularcraft.Sidecar</AssemblyName>
+    <RootNamespace>Tabularcraft.Sidecar</RootNamespace>
+    <!-- Self-contained publish produces a single binary the extension can ship -->
+    <SelfContained>false</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- AAS / TOM / ADOMD — use the NetCore retail packages for cross-platform support -->
+    <PackageReference Include="Microsoft.AnalysisServices.NetCore.retail.amd64" Version="19.*" />
+    <PackageReference Include="Microsoft.AnalysisServices.AdomdClient.NetCore.retail.amd64" Version="19.*" />
+    <!-- MSAL for interactive + service-principal auth -->
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.*" />
+  </ItemGroup>
+
+</Project>
