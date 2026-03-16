@@ -3,12 +3,14 @@ import { SidecarManager } from './sidecarManager';
 import { ConnectionManager } from './connectionManager';
 import { ModelTreeProvider } from './providers/modelTreeProvider';
 import { registerConnectCommands } from './commands/connect';
+import { registerConnectionNodeCommands } from './commands/connections';
 import { registerProcessCommands } from './commands/process';
 import { registerMeasureCommands } from './commands/measures';
 import { registerRenameCommands } from './commands/rename';
 import { openTmslConsole } from './webviews/tmslConsole';
 import { ModelNode } from './providers/modelTreeProvider';
 import { openPropertiesEditor } from './webviews/propertiesEditor';
+import { ConnectionProfileStore } from './connectionProfiles';
 
 const DOUBLE_CLICK_MS = 400;
 
@@ -45,13 +47,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     try {
         const sidecarManager = new SidecarManager(context);
         const connectionManager = new ConnectionManager();
+        const profileStore = new ConnectionProfileStore(context);
 
         // Start the sidecar process and configure the client with its listening port.
         const port = await sidecarManager.start();
         connectionManager.setSidecarPort(port);
 
         // Tree view
-        const treeProvider = new ModelTreeProvider(connectionManager);
+        const treeProvider = new ModelTreeProvider(connectionManager, profileStore);
         const treeView = vscode.window.createTreeView('tabularcraft.modelTree', {
             treeDataProvider: treeProvider,
             showCollapseAll: true,
@@ -89,7 +92,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         });
 
         // Register all commands
-        registerConnectCommands(context, connectionManager, treeProvider);
+        registerConnectCommands(context, connectionManager, treeProvider, profileStore);
+        registerConnectionNodeCommands(context, connectionManager, treeProvider, profileStore);
         registerProcessCommands(context, connectionManager);
         registerMeasureCommands(context, connectionManager);
         registerRenameCommands(context, connectionManager, treeProvider);

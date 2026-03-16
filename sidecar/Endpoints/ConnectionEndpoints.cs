@@ -20,6 +20,19 @@ public static class ConnectionEndpoints
             }
         });
 
+        app.MapPost("/connection/test", (ConnectRequest request, AasConnectionService svc) =>
+        {
+            try
+            {
+                svc.TestConnection(request);
+                return Results.Ok(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(ex.Message);
+            }
+        });
+
         app.MapPost("/connection/disconnect", (AasConnectionService svc) =>
         {
             svc.Disconnect();

@@ -53,6 +53,29 @@ public sealed class AasConnectionService : IDisposable
         }
     }
 
+    public void TestConnection(ConnectRequest request)
+    {
+        // Use a temporary server instance so we do not alter the active extension session.
+        using var testServer = new TomServer();
+        var connectionString = BuildConnectionString(request);
+
+        if (request.AuthMode == AuthMode.Interactive)
+        {
+            var token = AcquireInteractiveAccessToken();
+            testServer.AccessToken = new AccessToken(token.AccessToken, token.ExpiresOn);
+        }
+
+        testServer.Connect(connectionString);
+        try
+        {
+            _ = testServer.Connected;
+        }
+        finally
+        {
+            testServer.Disconnect();
+        }
+    }
+
     public void Disconnect()
     {
         lock (_lock) { DisconnectCore(); }

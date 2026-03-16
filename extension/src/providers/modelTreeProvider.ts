@@ -1,8 +1,10 @@
 import * as vscode from 'vscode';
 import { ConnectionManager, DatabaseInfo } from '../connectionManager';
+import { ConnectionProfile, ConnectionProfileStore } from '../connectionProfiles';
 
 type NodeKind =
-    | 'server'
+    | 'connections-root'
+    | 'connection-profile'
     | 'database'
     | 'tables-group'
     | 'roles-group'
@@ -30,24 +32,11 @@ type NodeKind =
 export type TableSortMode = 'model' | 'name-asc';
 
 export class ModelNode extends vscode.TreeItem {
-    private static readonly renameableKinds = new Set<NodeKind>([
-        'database',
-        'table',
-        'column',
-        'measure',
-        'hierarchy',
-        'level',
-        'partition',
-        'role',
-        'perspective',
-        'data-source',
-        'culture',
-    ]);
-
     constructor(
         public readonly kind: NodeKind,
         label: string,
         collapsible: vscode.TreeItemCollapsibleState,
+        public readonly profileId?: string,
         public readonly database?: string,
         public readonly table?: string,
         public readonly partition?: string,
@@ -61,6 +50,7 @@ export class ModelNode extends vscode.TreeItem {
 
     private resolveContextValue(): string {
         switch (this.kind) {
+            case 'connection-profile': return 'connection-profile';
             case 'database': return 'database';
             case 'table': return 'table';
             case 'column': return 'column';
@@ -78,7 +68,8 @@ export class ModelNode extends vscode.TreeItem {
 
     private resolveIcon(): vscode.ThemeIcon {
         switch (this.kind) {
-            case 'server': return new vscode.ThemeIcon('server');
+            case 'connections-root': return new vscode.ThemeIcon('plug');
+            case 'connection-profile': return new vscode.ThemeIcon('plug');
             case 'database': return new vscode.ThemeIcon('database');
             case 'tables-group': return new vscode.ThemeIcon('symbol-namespace');
             case 'roles-group': return new vscode.ThemeIcon('shield');
@@ -122,14 +113,31 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
     private databases: DatabaseInfo[] = [];
+    private profiles: ConnectionProfile[] = [];
+    private activeProfileId: string | undefined;
     private tableSortMode: TableSortMode = 'model';
 
-    constructor(private readonly connectionManager: ConnectionManager) {
+    constructor(
+        private readonly connectionManager: ConnectionManager,
+        private readonly profileStore: ConnectionProfileStore
+    ) {
+        this.refreshConnections();
         connectionManager.onDidChangeConnection(() => this.reload());
     }
 
     refresh(): void {
         this.reload();
+    }
+
+    async refreshConnections(): Promise<void> {
+        this.profiles = await this.profileStore.listProfiles();
+        this._onDidChangeTreeData.fire();
+    }
+
+    async setActiveProfile(profileId: string, profileName: string): Promise<void> {
+        this.activeProfileId = profileId;
+        vscode.commands.executeCommand('setContext', 'tabularcraft.activeConnectionName', profileName);
+        await this.reload();
     }
 
     async chooseTableSortMode(): Promise<void> {
@@ -167,38 +175,81 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
         this._onDidChangeTreeData.fire();
     }
 
+    private async ensureConnectionLoaded(profileId?: string): Promise<void> {
+        if (!profileId) {
+            return;
+        }
+
+        if (this.activeProfileId === profileId && this.connectionManager.isConnected) {
+            if (this.databases.length === 0) {
+                await this.reload();
+            }
+            return;
+        }
+
+        const profile = await this.profileStore.getProfile(profileId);
+        if (!profile) {
+            vscode.window.showErrorMessage('Tabularcraft: Connection profile was not found.');
+            return;
+        }
+
+        const config = await this.profileStore.toConnectionConfig(profile);
+
+        try {
+            await this.connectionManager.connect(config);
+            this.activeProfileId = profile.id;
+            vscode.commands.executeCommand('setContext', 'tabularcraft.activeConnectionName', profile.name);
+            await this.reload();
+        } catch (err) {
+            this.databases = [];
+            vscode.window.showErrorMessage(`Tabularcraft: Failed to connect profile "${profile.name}": ${(err as Error).message}`);
+        }
+    }
+
     getTreeItem(element: ModelNode): vscode.TreeItem {
         return element;
     }
 
     async getChildren(element?: ModelNode): Promise<ModelNode[]> {
-        if (!this.connectionManager.isConnected) {
-            return [];
-        }
-
         if (!element) {
-            // Root: show server node
-            const config = this.connectionManager.currentConfig!;
             return [
                 new ModelNode(
-                    'server',
-                    config.server,
+                    'connections-root',
+                    'Connections',
                     vscode.TreeItemCollapsibleState.Expanded
                 ),
             ];
         }
 
-        if (element.kind === 'server') {
-            // Databases
-            if (this.databases.length === 0) {
-                await this.reload();
+        if (element.kind === 'connections-root') {
+            if (this.profiles.length === 0) {
+                await this.refreshConnections();
             }
+
+            return this.profiles.map((profile) => {
+                const label = this.activeProfileId === profile.id ? `${profile.name} (connected)` : profile.name;
+                return new ModelNode(
+                    'connection-profile',
+                    label,
+                    vscode.TreeItemCollapsibleState.Collapsed,
+                    profile.id
+                );
+            });
+        }
+
+        if (element.kind === 'connection-profile') {
+            await this.ensureConnectionLoaded(element.profileId);
+            if (!this.connectionManager.isConnected) {
+                return [];
+            }
+
             return this.databases.map(
                 (db) =>
                     new ModelNode(
                         'database',
                         db.name,
                         vscode.TreeItemCollapsibleState.Collapsed,
+                        element.profileId,
                         db.name
                     )
             );
@@ -210,36 +261,42 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                     'tables-group',
                     'Tables',
                     vscode.TreeItemCollapsibleState.Expanded,
+                    element.profileId,
                     element.database
                 ),
                 new ModelNode(
                     'roles-group',
                     'Roles',
                     vscode.TreeItemCollapsibleState.Collapsed,
+                    element.profileId,
                     element.database
                 ),
                 new ModelNode(
                     'perspectives-group',
                     'Perspectives',
                     vscode.TreeItemCollapsibleState.Collapsed,
+                    element.profileId,
                     element.database
                 ),
                 new ModelNode(
                     'relationships-group',
                     'Relationships',
                     vscode.TreeItemCollapsibleState.Collapsed,
+                    element.profileId,
                     element.database
                 ),
                 new ModelNode(
                     'data-sources-group',
                     'Data Sources',
                     vscode.TreeItemCollapsibleState.Collapsed,
+                    element.profileId,
                     element.database
                 ),
                 new ModelNode(
                     'cultures-group',
                     'Cultures',
                     vscode.TreeItemCollapsibleState.Collapsed,
+                    element.profileId,
                     element.database
                 ),
             ];
@@ -253,6 +310,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                         'role',
                         r.name,
                         vscode.TreeItemCollapsibleState.None,
+                        element.profileId,
                         element.database
                     )
             );
@@ -266,6 +324,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                         'perspective',
                         p.name,
                         vscode.TreeItemCollapsibleState.None,
+                        element.profileId,
                         element.database
                     )
             );
@@ -279,6 +338,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                         'relationship',
                         r.name,
                         vscode.TreeItemCollapsibleState.None,
+                        element.profileId,
                         element.database
                     )
             );
@@ -292,6 +352,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                         'data-source',
                         ds.name,
                         vscode.TreeItemCollapsibleState.None,
+                        element.profileId,
                         element.database
                     )
             );
@@ -305,6 +366,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                         'culture',
                         c.name,
                         vscode.TreeItemCollapsibleState.None,
+                        element.profileId,
                         element.database
                     )
             );
@@ -323,6 +385,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                         'table',
                         t.name,
                         vscode.TreeItemCollapsibleState.Collapsed,
+                        element.profileId,
                         element.database,
                         t.name
                     )
@@ -335,6 +398,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                     'columns-group',
                     'Columns',
                     vscode.TreeItemCollapsibleState.Expanded,
+                    element.profileId,
                     element.database,
                     element.table
                 ),
@@ -342,6 +406,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                     'measures-group',
                     'Measures',
                     vscode.TreeItemCollapsibleState.Collapsed,
+                    element.profileId,
                     element.database,
                     element.table
                 ),
@@ -349,6 +414,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                     'hierarchies-group',
                     'Hierarchies',
                     vscode.TreeItemCollapsibleState.Collapsed,
+                    element.profileId,
                     element.database,
                     element.table
                 ),
@@ -356,6 +422,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                     'partitions-group',
                     'Partitions',
                     vscode.TreeItemCollapsibleState.Collapsed,
+                    element.profileId,
                     element.database,
                     element.table
                 ),
@@ -371,6 +438,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                         'column',
                         c.name,
                         vscode.TreeItemCollapsibleState.None,
+                        element.profileId,
                         element.database,
                         element.table
                     )
@@ -386,6 +454,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                         'measure',
                         m.name,
                         vscode.TreeItemCollapsibleState.None,
+                        element.profileId,
                         element.database,
                         element.table
                     )
@@ -401,6 +470,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                         'hierarchy',
                         h.name,
                         vscode.TreeItemCollapsibleState.Collapsed,
+                        element.profileId,
                         element.database,
                         element.table,
                         undefined,
@@ -415,9 +485,11 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                     'levels-group',
                     'Levels',
                     vscode.TreeItemCollapsibleState.Expanded,
+                    element.profileId,
                     element.database,
                     element.table,
-                    element.partition
+                    undefined,
+                    element.hierarchy
                 ),
             ];
         }
@@ -425,17 +497,18 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
         if (element.kind === 'levels-group') {
             const db = this.databases.find((d) => d.name === element.database);
             const table = db?.tables.find((t) => t.name === element.table);
-            const hierarchy = table?.hierarchies.find((h) => h.name === element.partition);
+            const hierarchy = table?.hierarchies.find((h) => h.name === element.hierarchy);
             return (hierarchy?.levels ?? []).map(
                 (l) =>
                     new ModelNode(
                         'level',
                         l.name,
                         vscode.TreeItemCollapsibleState.None,
+                        element.profileId,
                         element.database,
                         element.table,
                         undefined,
-                        element.partition
+                        element.hierarchy
                     )
             );
         }
@@ -449,6 +522,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                         'partition',
                         p.name,
                         vscode.TreeItemCollapsibleState.None,
+                        element.profileId,
                         element.database,
                         element.table,
                         p.name

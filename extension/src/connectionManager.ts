@@ -132,6 +132,11 @@ export class ConnectionManager {
         this._onDidChangeConnection.fire(true);
     }
 
+    async testConnection(config: ConnectionConfig): Promise<void> {
+        this.assertClient();
+        await this.client!.post('/connection/test', config);
+    }
+
     async disconnect(): Promise<void> {
         if (!this._connected) return;
         this.assertClient();
