@@ -1,13 +1,22 @@
 using Tabularcraft.Sidecar.Endpoints;
 using Tabularcraft.Sidecar.Services;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Listen on a random available port; the chosen port is printed to stdout
-// so the VS Code extension can discover it.
-builder.WebHost.UseUrls("http://127.0.0.1:0");
+// In local extension-host runs, ASPNETCORE_URLS may be provided explicitly.
+// Fallback to a random localhost port when no URL is configured.
+if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
+{
+	builder.WebHost.UseUrls("http://127.0.0.1:0");
+}
 
 builder.Services.AddSingleton<AasConnectionService>();
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+	// Accept enum values as strings in JSON payloads from the VS Code extension.
+	options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 
 var app = builder.Build();
 

@@ -32,6 +32,12 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "tabularcraft.sortTables",
+        "title": "Sort Tables",
+        "category": "Tabularcraft",
+        "icon": "$(list-ordered)"
+      },
+      {
         "command": "tabularcraft.processDatabase",
         "title": "Process Database (Full)",
         "category": "Tabularcraft",
@@ -60,6 +66,18 @@
         "title": "Open Measure Editor",
         "category": "Tabularcraft",
         "icon": "$(symbol-function)"
+      },
+      {
+        "command": "tabularcraft.renameObject",
+        "title": "Rename",
+        "category": "Tabularcraft",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "tabularcraft.openProperties",
+        "title": "Open Properties",
+        "category": "Tabularcraft",
+        "icon": "$(list-selection)"
       },
       {
         "command": "tabularcraft.openTmslConsole",
@@ -104,6 +122,11 @@
           "group": "navigation"
         },
         {
+          "command": "tabularcraft.sortTables",
+          "when": "view == tabularcraft.modelTree && tabularcraft.connected",
+          "group": "navigation"
+        },
+        {
           "command": "tabularcraft.openTmslConsole",
           "when": "view == tabularcraft.modelTree && tabularcraft.connected",
           "group": "navigation"
@@ -134,9 +157,26 @@
           "command": "tabularcraft.processAdd",
           "when": "view == tabularcraft.modelTree && viewItem == partition",
           "group": "process"
+        },
+        {
+          "command": "tabularcraft.renameObject",
+          "when": "view == tabularcraft.modelTree && (viewItem == database || viewItem == table || viewItem == column || viewItem == measure || viewItem == hierarchy || viewItem == level || viewItem == partition || viewItem == role || viewItem == perspective || viewItem == data-source || viewItem == culture)",
+          "group": "navigation"
+        },
+        {
+          "command": "tabularcraft.openProperties",
+          "when": "view == tabularcraft.modelTree && (viewItem == database || viewItem == table || viewItem == column || viewItem == measure || viewItem == hierarchy || viewItem == level || viewItem == partition || viewItem == role || viewItem == perspective || viewItem == relationship || viewItem == data-source || viewItem == culture)",
+          "group": "navigation@1"
         }
       ]
-    }
+    },
+    "keybindings": [
+      {
+        "command": "tabularcraft.renameObject",
+        "key": "f2",
+        "when": "view == tabularcraft.modelTree && tabularcraft.connected && (viewItem == database || viewItem == table || viewItem == column || viewItem == measure || viewItem == hierarchy || viewItem == level || viewItem == partition || viewItem == role || viewItem == perspective || viewItem == data-source || viewItem == culture)"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

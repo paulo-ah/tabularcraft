@@ -101,13 +101,18 @@ async function runConnectFlow(
         config.clientSecret = clientSecret;
     }
 
-    await vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Notification, title: 'Tabularcraft: Connecting…', cancellable: false },
-        async () => {
-            await connectionManager.connect(config);
-        }
-    );
+    try {
+        await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Notification, title: 'Tabularcraft: Connecting…', cancellable: false },
+            async () => {
+                await connectionManager.connect(config);
+            }
+        );
 
-    vscode.window.showInformationMessage(`Tabularcraft: Connected to ${server}.`);
-    treeProvider.refresh();
+        vscode.window.showInformationMessage(`Tabularcraft: Connected to ${server}.`);
+        treeProvider.refresh();
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        vscode.window.showErrorMessage(`Tabularcraft connection failed: ${message}`);
+    }
 }

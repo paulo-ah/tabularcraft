@@ -17,11 +17,40 @@ export interface ConnectionConfig {
 export interface DatabaseInfo {
     name: string;
     tables: TableInfo[];
+    roles: NamedObjectInfo[];
+    perspectives: NamedObjectInfo[];
+    relationships: NamedObjectInfo[];
+    dataSources: NamedObjectInfo[];
+    cultures: NamedObjectInfo[];
 }
 
 export interface TableInfo {
     name: string;
+    columns: ColumnInfo[];
+    measures: MeasureTreeInfo[];
+    hierarchies: HierarchyTreeInfo[];
     partitions: PartitionInfo[];
+}
+
+export interface NamedObjectInfo {
+    name: string;
+}
+
+export interface ColumnInfo {
+    name: string;
+}
+
+export interface MeasureTreeInfo {
+    name: string;
+}
+
+export interface HierarchyTreeInfo {
+    name: string;
+    levels: LevelInfo[];
+}
+
+export interface LevelInfo {
+    name: string;
 }
 
 export interface PartitionInfo {
@@ -32,6 +61,41 @@ export interface MeasureInfo {
     name: string;
     expression: string;
     formatString?: string;
+}
+
+export interface RenameObjectRequest {
+    database: string;
+    objectType: string;
+    oldName: string;
+    newName: string;
+    table?: string;
+    hierarchy?: string;
+}
+
+export interface ObjectPropertiesRequest {
+    database: string;
+    objectType: string;
+    objectName: string;
+    table?: string;
+    hierarchy?: string;
+}
+
+export interface ObjectPropertyInfo {
+    name: string;
+    value: string;
+    editable: boolean;
+    type: 'string' | 'number' | 'boolean' | 'enum';
+    required: boolean;
+    enumValues?: string[];
+}
+
+export interface UpdateObjectPropertiesRequest {
+    database: string;
+    objectType: string;
+    objectName: string;
+    updates: Array<{ name: string; value: string }>;
+    table?: string;
+    hierarchy?: string;
 }
 
 /**
@@ -124,6 +188,21 @@ export class ConnectionManager {
         this.assertConnected();
         const result = await this.client!.post<{ result: string }>('/tmsl/execute', { script });
         return result.result;
+    }
+
+    async renameObject(request: RenameObjectRequest): Promise<void> {
+        this.assertConnected();
+        await this.client!.post('/model/rename', request);
+    }
+
+    async getObjectProperties(request: ObjectPropertiesRequest): Promise<ObjectPropertyInfo[]> {
+        this.assertConnected();
+        return this.client!.post<ObjectPropertyInfo[]>('/model/properties/get', request);
+    }
+
+    async updateObjectProperties(request: UpdateObjectPropertiesRequest): Promise<void> {
+        this.assertConnected();
+        await this.client!.post('/model/properties/update', request);
     }
 
     private assertClient(): void {
