@@ -101,6 +101,12 @@ export interface UpdateObjectPropertiesRequest {
     hierarchy?: string;
 }
 
+export interface PartitionQueryInfo {
+    query: string;
+    queryType: string;
+    editable: boolean;
+}
+
 /**
  * Holds the current AAS connection state and exposes typed methods
  * that delegate to SidecarClient. Emits an event when the state changes
@@ -173,6 +179,16 @@ export class ConnectionManager {
     async processAdd(tmsl: string): Promise<void> {
         this.assertConnected();
         await this.client!.post('/tmsl/execute', { script: tmsl });
+    }
+
+    async getPartitionQuery(database: string, table: string, partition: string): Promise<PartitionQueryInfo> {
+        this.assertConnected();
+        return this.client!.post<PartitionQueryInfo>('/process/partition/query/get', { database, table, partition });
+    }
+
+    async updatePartitionQuery(database: string, table: string, partition: string, query: string): Promise<void> {
+        this.assertConnected();
+        await this.client!.post('/process/partition/query/update', { database, table, partition, query });
     }
 
     async getMeasures(database: string, table: string): Promise<MeasureInfo[]> {

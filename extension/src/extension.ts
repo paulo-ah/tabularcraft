@@ -11,6 +11,7 @@ import { openTmslConsole } from './webviews/tmslConsole';
 import { ModelNode } from './providers/modelTreeProvider';
 import { openPropertiesEditor } from './webviews/propertiesEditor';
 import { ConnectionProfileStore } from './connectionProfiles';
+import { openPartitionQueryEditor } from './webviews/partitionQueryEditor';
 
 const DOUBLE_CLICK_MS = 400;
 
@@ -35,7 +36,6 @@ const inspectableKinds = new Set([
     'measure',
     'hierarchy',
     'level',
-    'partition',
     'role',
     'perspective',
     'relationship',
@@ -70,6 +70,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
                 return;
             }
 
+            if (node.kind === 'partition' && node.database && node.table && node.partition) {
+                openPartitionQueryEditor(context, connectionManager, node.database, node.table, node.partition);
+            }
+
             if (inspectableKinds.has(node.kind)) {
                 openPropertiesEditor(context, connectionManager, node);
             }
@@ -101,10 +105,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         context.subscriptions.push(
             treeView,
             vscode.commands.registerCommand('tabularcraft.refreshTree', () => treeProvider.refresh()),
-            vscode.commands.registerCommand('tabularcraft.sortTables', () => treeProvider.chooseTableSortMode()),
             vscode.commands.registerCommand('tabularcraft.openProperties', (node: ModelNode) =>
                 openPropertiesEditor(context, connectionManager, node)
             ),
+            vscode.commands.registerCommand('tabularcraft.openPartitionQuery', (node: ModelNode) => {
+                if (!node?.database || !node?.table || !node?.partition) {
+                    vscode.window.showWarningMessage('Select a partition node to open its query.');
+                    return;
+                }
+
+                return openPartitionQueryEditor(
+                    context,
+                    connectionManager,
+                    node.database,
+                    node.table,
+                    node.partition
+                );
+            }),
             vscode.commands.registerCommand('tabularcraft.openTmslConsole', () =>
                 openTmslConsole(context, connectionManager)
             )

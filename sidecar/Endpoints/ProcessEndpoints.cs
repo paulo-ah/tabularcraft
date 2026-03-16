@@ -45,5 +45,30 @@ public static class ProcessEndpoints
                 return Results.BadRequest(ex.Message);
             }
         });
+
+        app.MapPost("/process/partition/query/get", (GetPartitionQueryRequest request, AasConnectionService svc) =>
+        {
+            try
+            {
+                return Results.Ok(svc.GetPartitionQuery(request.Database, request.Table, request.Partition));
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(ex.Message);
+            }
+        });
+
+        app.MapPost("/process/partition/query/update", (UpdatePartitionQueryRequest request, AasConnectionService svc) =>
+        {
+            try
+            {
+                svc.UpdatePartitionQuery(request.Database, request.Table, request.Partition, request.Query);
+                return Results.Ok(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(ex.Message);
+            }
+        });
     }
 }

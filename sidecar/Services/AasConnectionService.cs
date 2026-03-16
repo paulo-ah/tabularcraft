@@ -22,7 +22,6 @@ public sealed class AasConnectionService : IDisposable
     private TomServer? _server;
     private ConnectRequest? _config;
 
-    private static readonly string[] CommonProperties = ["Name", "Description", "IsHidden"];
     private static readonly HashSet<string> RequiredStringProperties =
     [
         "Expression"
@@ -222,6 +221,50 @@ public sealed class AasConnectionService : IDisposable
         }
     }
 
+    public PartitionQueryDto GetPartitionQuery(string databaseName, string tableName, string partitionName)
+    {
+        lock (_lock)
+        {
+            var table = GetTable(databaseName, tableName);
+            var partition = table.Partitions.Find(partitionName)
+                ?? throw new InvalidOperationException($"Partition '{partitionName}' not found in table '{tableName}'.");
+
+            return partition.Source switch
+            {
+                QueryPartitionSource q => new PartitionQueryDto(q.Query ?? string.Empty, "SQL", true),
+                MPartitionSource m => new PartitionQueryDto(m.Expression ?? string.Empty, "M", true),
+                CalculatedPartitionSource c => new PartitionQueryDto(c.Expression ?? string.Empty, "Calculated", false),
+                _ => new PartitionQueryDto(string.Empty, "Unknown", false),
+            };
+        }
+    }
+
+    public void UpdatePartitionQuery(string databaseName, string tableName, string partitionName, string query)
+    {
+        lock (_lock)
+        {
+            var table = GetTable(databaseName, tableName);
+            var partition = table.Partitions.Find(partitionName)
+                ?? throw new InvalidOperationException($"Partition '{partitionName}' not found in table '{tableName}'.");
+
+            switch (partition.Source)
+            {
+                case QueryPartitionSource q:
+                    q.Query = query;
+                    break;
+                case MPartitionSource m:
+                    m.Expression = query;
+                    break;
+                case CalculatedPartitionSource:
+                    throw new InvalidOperationException("Calculated partitions are read-only and cannot be edited.");
+                default:
+                    throw new InvalidOperationException("Unsupported partition source type for query editing.");
+            }
+
+            table.Model.SaveChanges();
+        }
+    }
+
     public void RenameObject(RenameObjectRequest request)
     {
         lock (_lock)
@@ -341,26 +384,19 @@ public sealed class AasConnectionService : IDisposable
                 request.Hierarchy
             );
 
-            var propertyNames = GetPropertyListForType(request.ObjectType);
             var result = new List<ObjectPropertyDto>();
 
-            foreach (var propertyName in propertyNames)
+            foreach (var prop in GetBrowsableProperties(target.GetType()))
             {
-                var prop = target.GetType().GetProperty(propertyName);
-                if (prop is null || !prop.CanRead)
-                {
-                    continue;
-                }
-
                 var value = prop.GetValue(target);
                 var typeName = GetPropertyTypeName(prop.PropertyType);
-                var editable = prop.CanWrite && !string.Equals(propertyName, "Name", StringComparison.Ordinal);
+                var editable = prop.CanWrite && !string.Equals(prop.Name, "Name", StringComparison.Ordinal);
                 var required = IsPropertyRequired(prop);
                 var enumValues = GetEnumValues(prop.PropertyType);
 
                 result.Add(
                     new ObjectPropertyDto(
-                        propertyName,
+                        prop.Name,
                         ConvertValueToString(value),
                         editable,
                         typeName,
@@ -601,18 +637,48 @@ public sealed class AasConnectionService : IDisposable
             ?? throw new InvalidOperationException($"Level '{levelName}' not found in hierarchy '{hierarchyName}'.");
     }
 
-    private static IEnumerable<string> GetPropertyListForType(string objectType)
+    private static IEnumerable<PropertyInfo> GetBrowsableProperties(Type type)
     {
-        var specific = objectType.Trim().ToLowerInvariant() switch
-        {
-            "column" => new[] { "DataType", "SourceColumn", "FormatString", "SummarizeBy" },
-            "measure" => new[] { "Expression", "FormatString", "DisplayFolder" },
-            "partition" => new[] { "Mode", "State" },
-            "table" => new[] { "DataCategory", "DefaultDetailRowsDefinitionExpression", "ShowAsVariationsOnly" },
-            _ => Array.Empty<string>(),
-        };
+        return type
+            .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            .Where(IsBrowsableProperty)
+            .OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase);
+    }
 
-        return CommonProperties.Concat(specific);
+    private static bool IsBrowsableProperty(PropertyInfo prop)
+    {
+        if (!prop.CanRead)
+        {
+            return false;
+        }
+
+        if (prop.GetIndexParameters().Length > 0)
+        {
+            return false;
+        }
+
+        var propertyType = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+
+        if (propertyType == typeof(string))
+        {
+            return true;
+        }
+
+        if (propertyType.IsEnum)
+        {
+            return true;
+        }
+
+        if (propertyType.IsPrimitive)
+        {
+            return true;
+        }
+
+        return propertyType == typeof(decimal)
+            || propertyType == typeof(DateTime)
+            || propertyType == typeof(DateTimeOffset)
+            || propertyType == typeof(TimeSpan)
+            || propertyType == typeof(Guid);
     }
 
     private static string ConvertValueToString(object? value)

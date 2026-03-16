@@ -14,12 +14,6 @@
   "contributes": {
     "commands": [
       {
-        "command": "tabularcraft.connect",
-        "title": "Connect to AAS",
-        "category": "Tabularcraft",
-        "icon": "$(plug)"
-      },
-      {
         "command": "tabularcraft.addConnection",
         "title": "Add Connection",
         "category": "Tabularcraft",
@@ -32,28 +26,10 @@
         "icon": "$(debug-disconnect)"
       },
       {
-        "command": "tabularcraft.connectSaved",
-        "title": "Connect Using Saved Connection",
-        "category": "Tabularcraft",
-        "icon": "$(history)"
-      },
-      {
-        "command": "tabularcraft.manageConnections",
-        "title": "Manage Connections",
-        "category": "Tabularcraft",
-        "icon": "$(gear)"
-      },
-      {
         "command": "tabularcraft.refreshTree",
         "title": "Refresh",
         "category": "Tabularcraft",
         "icon": "$(refresh)"
-      },
-      {
-        "command": "tabularcraft.sortTables",
-        "title": "Sort Tables",
-        "category": "Tabularcraft",
-        "icon": "$(list-ordered)"
       },
       {
         "command": "tabularcraft.processDatabase",
@@ -78,6 +54,12 @@
         "title": "ProcessAdd (Incremental, TMSL)",
         "category": "Tabularcraft",
         "icon": "$(add)"
+      },
+      {
+        "command": "tabularcraft.openPartitionQuery",
+        "title": "Open Partition Query",
+        "category": "Tabularcraft",
+        "icon": "$(code)"
       },
       {
         "command": "tabularcraft.openMeasureEditor",
@@ -143,11 +125,6 @@
     "menus": {
       "view/title": [
         {
-          "command": "tabularcraft.connect",
-          "when": "view == tabularcraft.modelTree",
-          "group": "navigation"
-        },
-        {
           "command": "tabularcraft.addConnection",
           "when": "view == tabularcraft.modelTree",
           "group": "navigation"
@@ -158,22 +135,7 @@
           "group": "navigation"
         },
         {
-          "command": "tabularcraft.connectSaved",
-          "when": "view == tabularcraft.modelTree",
-          "group": "navigation"
-        },
-        {
-          "command": "tabularcraft.manageConnections",
-          "when": "view == tabularcraft.modelTree",
-          "group": "navigation"
-        },
-        {
           "command": "tabularcraft.refreshTree",
-          "when": "view == tabularcraft.modelTree && tabularcraft.connected",
-          "group": "navigation"
-        },
-        {
-          "command": "tabularcraft.sortTables",
           "when": "view == tabularcraft.modelTree && tabularcraft.connected",
           "group": "navigation"
         },
@@ -208,6 +170,11 @@
           "command": "tabularcraft.processAdd",
           "when": "view == tabularcraft.modelTree && viewItem == partition",
           "group": "process"
+        },
+        {
+          "command": "tabularcraft.openPartitionQuery",
+          "when": "view == tabularcraft.modelTree && viewItem == partition",
+          "group": "navigation"
         },
         {
           "command": "tabularcraft.renameObject",

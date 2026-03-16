@@ -32,8 +32,6 @@ type NodeKind =
     | 'partitions-group'
     | 'partition';
 
-export type TableSortMode = 'model' | 'name-asc';
-
 export class ModelNode extends vscode.TreeItem {
     constructor(
         public readonly kind: NodeKind,
@@ -122,8 +120,6 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
     private databases: DatabaseInfo[] = [];
     private profiles: ConnectionProfile[] = [];
     private activeProfileId: string | undefined;
-    private tableSortMode: TableSortMode = 'model';
-
     constructor(
         private readonly connectionManager: ConnectionManager,
         private readonly profileStore: ConnectionProfileStore
@@ -145,27 +141,6 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
         this.activeProfileId = profileId;
         vscode.commands.executeCommand('setContext', 'tabularcraft.activeConnectionName', profileName);
         await this.reload();
-    }
-
-    async chooseTableSortMode(): Promise<void> {
-        const selected = await vscode.window.showQuickPick(
-            [
-                { label: 'Model order', value: 'model' as TableSortMode },
-                { label: 'Name (A-Z)', value: 'name-asc' as TableSortMode },
-            ],
-            {
-                title: 'Tabularcraft - Table sorting',
-                ignoreFocusOut: true,
-                placeHolder: `Current: ${this.tableSortMode === 'model' ? 'Model order' : 'Name (A-Z)'}`,
-            }
-        );
-
-        if (!selected || selected.value === this.tableSortMode) {
-            return;
-        }
-
-        this.tableSortMode = selected.value;
-        this._onDidChangeTreeData.fire();
     }
 
     private async reload(): Promise<void> {
@@ -233,7 +208,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                 await this.refreshConnections();
             }
 
-            return this.profiles.map((profile) => {
+            return byName(this.profiles).map((profile) => {
                 const label = this.activeProfileId === profile.id ? `${profile.name} (connected)` : profile.name;
                 return new ModelNode(
                     'connection-profile',
@@ -250,7 +225,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                 return [];
             }
 
-            return this.databases.map(
+            return byName(this.databases).map(
                 (db) =>
                     new ModelNode(
                         'database',
@@ -311,7 +286,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
 
         if (element.kind === 'roles-group') {
             const db = this.databases.find((d) => d.name === element.database);
-            return (db?.roles ?? []).map(
+            return byName(db?.roles ?? []).map(
                 (r) =>
                     new ModelNode(
                         'role',
@@ -325,7 +300,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
 
         if (element.kind === 'perspectives-group') {
             const db = this.databases.find((d) => d.name === element.database);
-            return (db?.perspectives ?? []).map(
+            return byName(db?.perspectives ?? []).map(
                 (p) =>
                     new ModelNode(
                         'perspective',
@@ -339,7 +314,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
 
         if (element.kind === 'relationships-group') {
             const db = this.databases.find((d) => d.name === element.database);
-            return (db?.relationships ?? []).map(
+            return byName(db?.relationships ?? []).map(
                 (r) =>
                     new ModelNode(
                         'relationship',
@@ -353,7 +328,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
 
         if (element.kind === 'data-sources-group') {
             const db = this.databases.find((d) => d.name === element.database);
-            return (db?.dataSources ?? []).map(
+            return byName(db?.dataSources ?? []).map(
                 (ds) =>
                     new ModelNode(
                         'data-source',
@@ -367,7 +342,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
 
         if (element.kind === 'cultures-group') {
             const db = this.databases.find((d) => d.name === element.database);
-            return (db?.cultures ?? []).map(
+            return byName(db?.cultures ?? []).map(
                 (c) =>
                     new ModelNode(
                         'culture',
@@ -381,10 +356,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
 
         if (element.kind === 'tables-group') {
             const db = this.databases.find((d) => d.name === element.database);
-            const tables = [...(db?.tables ?? [])];
-            if (this.tableSortMode === 'name-asc') {
-                tables.sort((a, b) => a.name.localeCompare(b.name));
-            }
+            const tables = byName(db?.tables ?? []);
 
             return tables.map(
                 (t) =>
@@ -533,7 +505,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
             const db = this.databases.find((d) => d.name === element.database);
             const table = db?.tables.find((t) => t.name === element.table);
             const hierarchy = table?.hierarchies.find((h) => h.name === element.hierarchy);
-            return (hierarchy?.levels ?? []).map(
+            return byName(hierarchy?.levels ?? []).map(
                 (l) =>
                     new ModelNode(
                         'level',
@@ -551,7 +523,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
         if (element.kind === 'partitions-group') {
             const db = this.databases.find((d) => d.name === element.database);
             const table = db?.tables.find((t) => t.name === element.table);
-            return (table?.partitions ?? []).map(
+            return byName(table?.partitions ?? []).map(
                 (p) =>
                     new ModelNode(
                         'partition',
@@ -722,4 +694,8 @@ function folderRemainder(itemFolder: string, currentFolder: string): string {
     return itemLower.startsWith(`${currentLower}/`)
         ? itemFolder.slice(currentFolder.length + 1)
         : '';
+}
+
+function byName<T extends { name: string }>(items: T[]): T[] {
+    return [...items].sort((a, b) => a.name.localeCompare(b.name));
 }
