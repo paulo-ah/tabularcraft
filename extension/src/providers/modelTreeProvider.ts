@@ -19,10 +19,13 @@ type NodeKind =
     | 'culture'
     | 'table'
     | 'columns-group'
+    | 'columns-folder'
     | 'column'
     | 'measures-group'
+    | 'measures-folder'
     | 'measure'
     | 'hierarchies-group'
+    | 'hierarchies-folder'
     | 'hierarchy'
     | 'levels-group'
     | 'level'
@@ -41,7 +44,8 @@ export class ModelNode extends vscode.TreeItem {
         public readonly table?: string,
         public readonly partition?: string,
         public readonly hierarchy?: string,
-        public readonly objectName: string = label
+        public readonly objectName: string = label,
+        public readonly folderPath?: string
     ) {
         super(label, collapsible);
         this.contextValue = this.resolveContextValue();
@@ -84,10 +88,13 @@ export class ModelNode extends vscode.TreeItem {
             case 'culture': return new vscode.ThemeIcon('globe');
             case 'table': return new vscode.ThemeIcon('table');
             case 'columns-group': return new vscode.ThemeIcon('symbol-field');
+            case 'columns-folder': return new vscode.ThemeIcon('folder');
             case 'column': return new vscode.ThemeIcon('symbol-field');
             case 'measures-group': return new vscode.ThemeIcon('symbol-function');
+            case 'measures-folder': return new vscode.ThemeIcon('folder');
             case 'measure': return new vscode.ThemeIcon('symbol-function');
             case 'hierarchies-group': return new vscode.ThemeIcon('type-hierarchy-sub');
+            case 'hierarchies-folder': return new vscode.ThemeIcon('folder');
             case 'hierarchy': return new vscode.ThemeIcon('type-hierarchy-sub');
             case 'levels-group': return new vscode.ThemeIcon('list-tree');
             case 'level': return new vscode.ThemeIcon('list-flat');
@@ -432,50 +439,78 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
         if (element.kind === 'columns-group') {
             const db = this.databases.find((d) => d.name === element.database);
             const table = db?.tables.find((t) => t.name === element.table);
-            return (table?.columns ?? []).map(
-                (c) =>
-                    new ModelNode(
-                        'column',
-                        c.name,
-                        vscode.TreeItemCollapsibleState.None,
-                        element.profileId,
-                        element.database,
-                        element.table
-                    )
+            return this.buildFolderAwareNodes(
+                'columns',
+                table?.columns ?? [],
+                element.profileId,
+                element.database,
+                element.table,
+                element.folderPath
+            );
+        }
+
+        if (element.kind === 'columns-folder') {
+            const db = this.databases.find((d) => d.name === element.database);
+            const table = db?.tables.find((t) => t.name === element.table);
+            return this.buildFolderAwareNodes(
+                'columns',
+                table?.columns ?? [],
+                element.profileId,
+                element.database,
+                element.table,
+                element.folderPath
             );
         }
 
         if (element.kind === 'measures-group') {
             const db = this.databases.find((d) => d.name === element.database);
             const table = db?.tables.find((t) => t.name === element.table);
-            return (table?.measures ?? []).map(
-                (m) =>
-                    new ModelNode(
-                        'measure',
-                        m.name,
-                        vscode.TreeItemCollapsibleState.None,
-                        element.profileId,
-                        element.database,
-                        element.table
-                    )
+            return this.buildFolderAwareNodes(
+                'measures',
+                table?.measures ?? [],
+                element.profileId,
+                element.database,
+                element.table,
+                element.folderPath
+            );
+        }
+
+        if (element.kind === 'measures-folder') {
+            const db = this.databases.find((d) => d.name === element.database);
+            const table = db?.tables.find((t) => t.name === element.table);
+            return this.buildFolderAwareNodes(
+                'measures',
+                table?.measures ?? [],
+                element.profileId,
+                element.database,
+                element.table,
+                element.folderPath
             );
         }
 
         if (element.kind === 'hierarchies-group') {
             const db = this.databases.find((d) => d.name === element.database);
             const table = db?.tables.find((t) => t.name === element.table);
-            return (table?.hierarchies ?? []).map(
-                (h) =>
-                    new ModelNode(
-                        'hierarchy',
-                        h.name,
-                        vscode.TreeItemCollapsibleState.Collapsed,
-                        element.profileId,
-                        element.database,
-                        element.table,
-                        undefined,
-                        h.name
-                    )
+            return this.buildFolderAwareNodes(
+                'hierarchies',
+                table?.hierarchies ?? [],
+                element.profileId,
+                element.database,
+                element.table,
+                element.folderPath
+            );
+        }
+
+        if (element.kind === 'hierarchies-folder') {
+            const db = this.databases.find((d) => d.name === element.database);
+            const table = db?.tables.find((t) => t.name === element.table);
+            return this.buildFolderAwareNodes(
+                'hierarchies',
+                table?.hierarchies ?? [],
+                element.profileId,
+                element.database,
+                element.table,
+                element.folderPath
             );
         }
 
@@ -532,4 +567,159 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
 
         return [];
     }
+
+    private buildFolderAwareNodes(
+        group: 'columns' | 'measures' | 'hierarchies',
+        items: Array<{ name: string; displayFolder?: string }>,
+        profileId?: string,
+        database?: string,
+        table?: string,
+        currentFolderPath?: string
+    ): ModelNode[] {
+        const current = normalizeFolder(currentFolderPath);
+        const children = dedupeByKey(
+            items.map((i) => ({ name: i.name, folder: normalizeFolder(i.displayFolder) })),
+            (i) => `${i.folder.toLowerCase()}|${i.name.toLowerCase()}`
+        )
+            .filter((i) => isInCurrentFolder(i.folder, current));
+
+        const subfolders = new Map<string, string>();
+        const directItems: Array<{ name: string; folder: string }> = [];
+
+        for (const item of children) {
+            const remainder = folderRemainder(item.folder, current);
+            if (!remainder) {
+                directItems.push(item);
+                continue;
+            }
+
+            const nextSegment = remainder.split('/')[0];
+            const fullPath = current ? `${current}/${nextSegment}` : nextSegment;
+            const key = fullPath.toLowerCase();
+            if (!subfolders.has(key)) {
+                subfolders.set(key, fullPath);
+            }
+        }
+
+        const folderNodes = [...subfolders.values()]
+            .sort((a, b) => a.localeCompare(b))
+            .map((folderPath) =>
+                new ModelNode(
+                    folderKind(group),
+                    folderPath.split('/').pop() ?? folderPath,
+                    vscode.TreeItemCollapsibleState.Collapsed,
+                    profileId,
+                    database,
+                    table,
+                    undefined,
+                    undefined,
+                    folderPath,
+                    folderPath
+                )
+            );
+
+        const objectNodes = directItems
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((item) => {
+                const displayLabel = current ? `  ${item.name}` : item.name;
+
+                if (group === 'columns') {
+                    return new ModelNode(
+                        'column',
+                        displayLabel,
+                        vscode.TreeItemCollapsibleState.None,
+                        profileId,
+                        database,
+                        table
+                    );
+                }
+
+                if (group === 'measures') {
+                    return new ModelNode(
+                        'measure',
+                        displayLabel,
+                        vscode.TreeItemCollapsibleState.None,
+                        profileId,
+                        database,
+                        table
+                    );
+                }
+
+                return new ModelNode(
+                    'hierarchy',
+                    displayLabel,
+                    vscode.TreeItemCollapsibleState.Collapsed,
+                    profileId,
+                    database,
+                    table,
+                    undefined,
+                    item.name
+                );
+            });
+
+        return [...folderNodes, ...objectNodes];
+    }
+}
+
+function folderKind(group: 'columns' | 'measures' | 'hierarchies'): NodeKind {
+    switch (group) {
+        case 'columns': return 'columns-folder';
+        case 'measures': return 'measures-folder';
+        case 'hierarchies': return 'hierarchies-folder';
+    }
+}
+
+function normalizeFolder(value?: string): string {
+    if (!value) return '';
+
+    const candidate = value
+        .split(';')
+        .map((v) => v.trim())
+        .find((v) => !!v) ?? '';
+
+    return candidate
+        .replace(/\\/g, '/')
+        .split('/')
+        .map((segment) => segment.trim())
+        .filter((segment) => !!segment)
+        .join('/');
+}
+
+function dedupeByKey<T>(items: T[], keySelector: (value: T) => string): T[] {
+    const map = new Map<string, T>();
+    for (const item of items) {
+        const key = keySelector(item);
+        if (!map.has(key)) {
+            map.set(key, item);
+        }
+    }
+
+    return [...map.values()];
+}
+
+function isInCurrentFolder(itemFolder: string, currentFolder: string): boolean {
+    if (!currentFolder) {
+        return true;
+    }
+
+    const itemLower = itemFolder.toLowerCase();
+    const currentLower = currentFolder.toLowerCase();
+    return itemLower === currentLower || itemLower.startsWith(`${currentLower}/`);
+}
+
+function folderRemainder(itemFolder: string, currentFolder: string): string {
+    if (!currentFolder) {
+        return itemFolder;
+    }
+
+    const itemLower = itemFolder.toLowerCase();
+    const currentLower = currentFolder.toLowerCase();
+
+    if (itemLower === currentLower) {
+        return '';
+    }
+
+    return itemLower.startsWith(`${currentLower}/`)
+        ? itemFolder.slice(currentFolder.length + 1)
+        : '';
 }

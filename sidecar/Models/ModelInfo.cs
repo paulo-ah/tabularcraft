@@ -19,8 +19,8 @@ public record TableInfo(
 );
 
 public record NamedObjectInfo(string Name);
-public record ColumnInfo(string Name);
-public record MeasureInfo(string Name);
-public record HierarchyInfo(string Name, List<LevelInfo> Levels);
+public record ColumnInfo(string Name, string? DisplayFolder = null);
+public record MeasureInfo(string Name, string? DisplayFolder = null);
+public record HierarchyInfo(string Name, List<LevelInfo> Levels, string? DisplayFolder = null);
 public record LevelInfo(string Name);
 public record PartitionInfo(string Name);

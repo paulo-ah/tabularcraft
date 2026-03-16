@@ -118,12 +118,12 @@ public sealed class AasConnectionService : IDisposable
                         var columns = tbl.Columns
                             .Cast<Microsoft.AnalysisServices.Tabular.Column>()
                             .Where(c => c.Type != Microsoft.AnalysisServices.Tabular.ColumnType.RowNumber)
-                            .Select(c => new ColumnInfo(c.Name))
+                            .Select(c => new ColumnInfo(c.Name, c.DisplayFolder))
                             .ToList();
 
                         var measures = tbl.Measures
                             .Cast<Microsoft.AnalysisServices.Tabular.Measure>()
-                            .Select(m => new MeasureInfo(m.Name))
+                            .Select(m => new MeasureInfo(m.Name, m.DisplayFolder))
                             .ToList();
 
                         var hierarchies = tbl.Hierarchies
@@ -134,7 +134,8 @@ public sealed class AasConnectionService : IDisposable
                                     h.Levels
                                         .Cast<Microsoft.AnalysisServices.Tabular.Level>()
                                         .Select(l => new LevelInfo(l.Name))
-                                        .ToList()
+                                        .ToList(),
+                                    h.DisplayFolder
                                 )
                             )
                             .ToList();

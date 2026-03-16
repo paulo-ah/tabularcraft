@@ -38,15 +38,18 @@ export interface NamedObjectInfo {
 
 export interface ColumnInfo {
     name: string;
+    displayFolder?: string;
 }
 
 export interface MeasureTreeInfo {
     name: string;
+    displayFolder?: string;
 }
 
 export interface HierarchyTreeInfo {
     name: string;
     levels: LevelInfo[];
+    displayFolder?: string;
 }
 
 export interface LevelInfo {
