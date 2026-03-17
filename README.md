@@ -105,4 +105,9 @@ Run extension in dev host:
 
 ## License
 
-MIT. See [extension/LICENSE](extension/LICENSE).
+Dual-licensed:
+
+- Open source license: AGPL-3.0-or-later
+- Commercial license: required for proprietary/commercial distribution outside AGPL obligations
+
+See [extension/LICENSE](extension/LICENSE) and [extension/COMMERCIAL-LICENSE.md](extension/COMMERCIAL-LICENSE.md).
