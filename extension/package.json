@@ -2,8 +2,13 @@
   "name": "tabularcraft",
   "displayName": "Tabularcraft",
   "description": "Manage Azure Analysis Services tabular models from VS Code",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "maersk-pda",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/paulo-ah/tabularcraft.git"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
