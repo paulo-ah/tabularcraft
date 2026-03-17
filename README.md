@@ -54,7 +54,7 @@ Design principles:
 ```bash
 cd extension
 npm install
-npx @vscode/vsce package --allow-missing-repository --skip-license
+npx @vscode/vsce package
 ```
 
 2. Install the produced file:
@@ -105,4 +105,4 @@ Run extension in dev host:
 
 ## License
 
-Internal use - Maersk People Data & Analytics
+MIT. See [extension/LICENSE](extension/LICENSE).
