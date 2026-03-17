@@ -2,14 +2,31 @@
   "name": "tabularcraft",
   "displayName": "Tabularcraft",
   "description": "Manage Azure Analysis Services tabular models from VS Code",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "maersk-pda",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": ["Other"],
   "keywords": ["Azure Analysis Services", "AAS", "TOM", "XMLA", "DAX", "tabular"],
-  "activationEvents": [],
+  "activationEvents": [
+    "onView:tabularcraft.modelTree",
+    "onCommand:tabularcraft.addConnection",
+    "onCommand:tabularcraft.disconnect",
+    "onCommand:tabularcraft.refreshTree",
+    "onCommand:tabularcraft.processDatabase",
+    "onCommand:tabularcraft.processTable",
+    "onCommand:tabularcraft.processPartition",
+    "onCommand:tabularcraft.processAdd",
+    "onCommand:tabularcraft.openPartitionQuery",
+    "onCommand:tabularcraft.openMeasureEditor",
+    "onCommand:tabularcraft.connectionNodeConnect",
+    "onCommand:tabularcraft.connectionNodeEdit",
+    "onCommand:tabularcraft.connectionNodeDelete",
+    "onCommand:tabularcraft.renameObject",
+    "onCommand:tabularcraft.openProperties",
+    "onCommand:tabularcraft.openTmslConsole"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
