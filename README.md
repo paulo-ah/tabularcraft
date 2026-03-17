@@ -1,120 +1,108 @@
 # Tabularcraft
 
-A VS Code extension for managing **Azure Analysis Services (AAS)** tabular models — Tabular Editor ergonomics, inside VS Code.
+Tabularcraft is a VS Code extension for managing Azure Analysis Services tabular models with a native explorer, editing tools, and processing actions.
 
----
+## Current Functionality
 
-## Architecture
+- Connection profiles in the explorer (add, connect, edit, delete)
+- Authentication modes:
+	- Interactive (Entra ID)
+	- Username/password
+	- Service principal
+- Model explorer with A-Z sorting and folder-aware navigation
+- Object coverage in tree:
+	- Databases, tables, columns, measures, hierarchies, levels, partitions
+	- Roles, perspectives, relationships, data sources, cultures
+- Rename support from tree (double-click, context menu, F2)
+- Properties editor with validation and enum dropdowns
+- Partition query editor (SQL/M sources, read-only for calculated partitions)
+- Processing commands:
+	- Database full
+	- Table full
+	- Partition full
+	- ProcessAdd via TMSL
+- Measure editor
+- TMSL console
+
+## Repository Structure
+
+This repository follows a standard split architecture for VS Code extensions with external runtime dependencies:
 
 ```
-extension/          VS Code extension (TypeScript) — UI & orchestration
-sidecar/            .NET 8 Minimal API — all TOM/XMLA logic
+Tabularcraft/
+	extension/   # VS Code extension (TypeScript): UI, commands, tree, webviews
+	sidecar/     # .NET sidecar (Minimal API + TOM/AMO) for model operations
 ```
 
-The extension communicates with the sidecar over **localhost HTTP (JSON)**. The extension never embeds TOM logic directly.
+Design principles:
 
----
-
-## Features
-
-| Feature | Status |
-|---|---|
-| Connect to AAS (Interactive / Username+Password / Service Principal) | ✅ |
-| Browse databases, tables, partitions (sidebar tree) | ✅ |
-| Full processing — database, table, partition | ✅ |
-| Measure editor (DAX name + expression + format string) | ✅ |
-| TMSL console with reusable templates | ✅ |
-| Incremental refresh via ProcessAdd (TMSL) | ✅ |
-
----
+- Extension layer is orchestration/UI only.
+- TOM/XMLA operations stay in sidecar.
+- Communication is localhost HTTP/JSON.
+- VSIX packaging bundles sidecar artifacts for first-run reliability.
 
 ## Prerequisites
 
-| Tool | Version |
-|---|---|
-| VS Code | ≥ 1.85 |
-| Node.js | ≥ 20 |
-| .NET SDK | ≥ 8.0 |
+- VS Code 1.85+
+- Node.js 20+
+- .NET SDK 8+
 
----
+## Install from VSIX (Manual)
 
-## Getting Started
-
-### 1. Install extension dependencies
+1. Build and package:
 
 ```bash
 cd extension
 npm install
+npx @vscode/vsce package --allow-missing-repository --skip-license
 ```
 
-### 2. Build the sidecar
+2. Install the produced file:
+
+- VS Code UI: Extensions view -> ... -> Install from VSIX...
+- Or CLI:
+
+```bash
+code --install-extension extension/tabularcraft-<version>.vsix
+```
+
+3. Reload VS Code.
+
+4. Open the Tabularcraft view and use Add Connection.
+
+## Development
+
+Extension build:
+
+```bash
+cd extension
+npm run compile
+```
+
+Extension watch mode:
+
+```bash
+cd extension
+npm run watch
+```
+
+Sidecar build:
 
 ```bash
 cd sidecar
 dotnet build
 ```
 
-### 3. Launch (F5)
+Run extension in dev host:
 
-Open the workspace in VS Code and press **F5** to start the extension development host.
+- Open workspace in VS Code
+- Press F5
 
-The extension will automatically start the sidecar on a free port and shut it down when VS Code closes.
+## Packaging Notes
 
----
-
-## Connecting to AAS
-
-Open the **Tabularcraft** sidebar panel and click **Connect**. You'll be prompted for:
-
-- **Server** — e.g. `asazure://eastus.asazure.windows.net/myserver`
-- **Authentication** — Interactive (device login), Username+Password, or Service Principal
-
----
-
-## Supported Authentication Modes
-
-| Mode | Description |
-|---|---|
-| Interactive | Device or browser login via Entra ID |
-| Username + Password | Only if tenant policy allows |
-| Service Principal | App ID + Tenant ID + Client Secret |
-
-Credentials are **never stored** — provide them per session.
-
----
-
-## Development
-
-### Extension (TypeScript)
-```bash
-cd extension
-npm run compile      # one-shot build
-npm run watch        # incremental build
-```
-
-### Sidecar (.NET)
-```bash
-cd sidecar
-dotnet run           # runs on localhost (random port printed to stdout)
-```
-
-### Package extension
-```bash
-cd extension
-npx vsce package
-```
-
----
-
-## Out of Scope (current)
-
-- Power BI / Fabric XMLA
-- Advanced DAX IntelliSense
-- Visual relationship diagrams
-- Multidimensional (MD) models
-
----
+- `npm run vscode:prepublish` builds and bundles the sidecar automatically.
+- Sidecar startup supports executable launch and `dotnet <dll>` fallback.
 
 ## License
 
-Internal — Maersk People Data & Analytics
+Internal use - Maersk People Data & Analytics

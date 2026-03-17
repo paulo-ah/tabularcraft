@@ -7,6 +7,12 @@ import * as http from 'http';
 
 const SIDECAR_STARTUP_TIMEOUT_MS = 15_000;
 
+type SidecarLaunchInfo = {
+    command: string;
+    args: string[];
+    cwd: string;
+};
+
 /**
  * Manages the lifecycle of the .NET sidecar process.
  * The sidecar prints its chosen port to stdout on startup.
@@ -23,14 +29,14 @@ export class SidecarManager {
      * Starts the sidecar and resolves with the port it is listening on.
      */
     async start(): Promise<number> {
-        const sidecarPath = this.resolveSidecarPath();
+        const launch = this.resolveSidecarLaunch();
         const port = await this.getAvailablePort();
 
         let stderrBuffer = '';
         let stdoutBuffer = '';
 
-        this.process = cp.spawn(sidecarPath, [], {
-            cwd: path.dirname(sidecarPath),
+        this.process = cp.spawn(launch.command, launch.args, {
+            cwd: launch.cwd,
             env: {
                 ...process.env,
                 // Force a deterministic endpoint and avoid brittle stdout parsing.
@@ -148,29 +154,45 @@ export class SidecarManager {
         }
     }
 
-    /**
-     * Resolves the sidecar executable path relative to the extension.
-     * On Windows the binary is Tabularcraft.Sidecar.exe; elsewhere it has no extension.
-     */
-    private resolveSidecarPath(): string {
+    private resolveSidecarLaunch(): SidecarLaunchInfo {
         const isWin = process.platform === 'win32';
         const exe = isWin ? 'Tabularcraft.Sidecar.exe' : 'Tabularcraft.Sidecar';
+        const dll = 'Tabularcraft.Sidecar.dll';
 
-        // Packaged extension path first, then dev workspace sidecar build outputs.
-        const candidates = [
+        const executableCandidates = [
             path.join(this.extensionPath, 'sidecar', exe),
             path.resolve(this.extensionPath, '..', 'sidecar', 'bin', 'Debug', 'net8.0', exe),
             path.resolve(this.extensionPath, '..', 'sidecar', 'bin', 'Release', 'net8.0', exe),
         ];
 
-        for (const candidate of candidates) {
+        for (const candidate of executableCandidates) {
             if (fs.existsSync(candidate)) {
-                return candidate;
+                return {
+                    command: candidate,
+                    args: [],
+                    cwd: path.dirname(candidate),
+                };
+            }
+        }
+
+        const dllCandidates = [
+            path.join(this.extensionPath, 'sidecar', dll),
+            path.resolve(this.extensionPath, '..', 'sidecar', 'bin', 'Debug', 'net8.0', dll),
+            path.resolve(this.extensionPath, '..', 'sidecar', 'bin', 'Release', 'net8.0', dll),
+        ];
+
+        for (const candidate of dllCandidates) {
+            if (fs.existsSync(candidate)) {
+                return {
+                    command: 'dotnet',
+                    args: [candidate],
+                    cwd: path.dirname(candidate),
+                };
             }
         }
 
         throw new Error(
-            `Could not find sidecar executable. Checked: ${candidates.join(', ')}`
+            `Could not find sidecar executable. Checked: ${[...executableCandidates, ...dllCandidates].join(', ')}`
         );
     }
 }
