@@ -4,6 +4,7 @@
   "description": "Manage Azure Analysis Services tabular models from VS Code",
   "version": "0.1.4",
   "publisher": "maersk-pda",
+  "icon": "resources/icon.png",
   "license": "AGPL-3.0-or-later",
   "repository": {
     "type": "git",
@@ -140,7 +141,7 @@
         {
           "id": "tabularcraft-panel",
           "title": "Tabularcraft",
-          "icon": "resources/icon.svg"
+          "icon": "resources/activitybar-icon.svg"
         }
       ]
     },
