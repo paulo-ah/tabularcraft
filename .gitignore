@@ -4,6 +4,7 @@ out/
 *.vsix
 .vscode-test/
 extension/.vscode/
+extension/sidecar/
 
 # .NET sidecar
 sidecar/bin/
