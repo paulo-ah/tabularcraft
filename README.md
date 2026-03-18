@@ -103,6 +103,14 @@ Run extension in dev host:
 - `npm run vscode:prepublish` builds and bundles the sidecar automatically.
 - Sidecar startup supports executable launch and `dotnet <dll>` fallback.
 
+## Changelog
+
+- Full release history: [CHANGELOG.md](CHANGELOG.md)
+- Latest release: `0.1.5`
+	- Added create flows for data/calculated columns and measures
+	- Added delete for columns/measures from tree and Properties view
+	- Improved sidecar endpoint parity and API error diagnostics
+
 ## License
 
 Dual-licensed:
