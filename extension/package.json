@@ -2,7 +2,7 @@
   "name": "tabularcraft",
   "displayName": "Tabularcraft",
   "description": "Manage Azure Analysis Services tabular models from VS Code",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "publisher": "maersk-pda",
   "icon": "resources/icon.png",
   "license": "AGPL-3.0-or-later",
@@ -13,8 +13,17 @@
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": ["Other"],
-  "keywords": ["Azure Analysis Services", "AAS", "TOM", "XMLA", "DAX", "tabular"],
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "Azure Analysis Services",
+    "AAS",
+    "TOM",
+    "XMLA",
+    "DAX",
+    "tabular"
+  ],
   "activationEvents": [
     "onView:tabularcraft.modelTree",
     "onCommand:tabularcraft.addConnection",

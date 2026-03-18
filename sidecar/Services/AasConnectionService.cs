@@ -17,6 +17,7 @@ public sealed class AasConnectionService : IDisposable
     private static readonly string[] AasScopes = ["https://*.asazure.windows.net/.default"];
     // Public client used by local/dev tools for interactive sign-in.
     private const string PublicClientId = "04b07795-8ddb-461a-bbee-02f9e1bf7b46";
+    private static readonly Lazy<IPublicClientApplication> PublicClientApp = new(CreatePublicClientApp);
 
     private readonly object _lock = new();
     private TomServer? _server;
@@ -651,15 +652,36 @@ public sealed class AasConnectionService : IDisposable
     {
         try
         {
-            var app = PublicClientApplicationBuilder
-                .Create(PublicClientId)
-                .WithAuthority(AzureCloudInstance.AzurePublic, AadAuthorityAudience.AzureAdMultipleOrgs)
-                .WithDefaultRedirectUri()
-                .Build();
+            var app = PublicClientApp.Value;
+            var account = app
+                .GetAccountsAsync()
+                .GetAwaiter()
+                .GetResult()
+                .FirstOrDefault();
 
-            return app
-                .AcquireTokenInteractive(AasScopes)
-                .WithPrompt(Prompt.SelectAccount)
+            if (account is not null)
+            {
+                try
+                {
+                    return app
+                        .AcquireTokenSilent(AasScopes, account)
+                        .ExecuteAsync()
+                        .GetAwaiter()
+                        .GetResult();
+                }
+                catch (MsalUiRequiredException)
+                {
+                    // Silent token acquisition may fail when user interaction is needed.
+                }
+            }
+
+            var interactive = app.AcquireTokenInteractive(AasScopes);
+            if (account is not null)
+            {
+                interactive = interactive.WithAccount(account);
+            }
+
+            return interactive
                 .ExecuteAsync()
                 .GetAwaiter()
                 .GetResult();
@@ -668,6 +690,15 @@ public sealed class AasConnectionService : IDisposable
         {
             throw new InvalidOperationException($"Interactive sign-in failed: {ex.Message}", ex);
         }
+    }
+
+    private static IPublicClientApplication CreatePublicClientApp()
+    {
+        return PublicClientApplicationBuilder
+            .Create(PublicClientId)
+            .WithAuthority(AzureCloudInstance.AzurePublic, AadAuthorityAudience.AzureAdMultipleOrgs)
+            .WithDefaultRedirectUri()
+            .Build();
     }
 
     private void AssertConnected()

@@ -593,7 +593,7 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
         const objectNodes = directItems
             .sort((a, b) => a.name.localeCompare(b.name))
             .map((item) => {
-                const displayLabel = current ? `  ${item.name}` : item.name;
+                const displayLabel = item.name;
 
                 if (group === 'columns') {
                     return new ModelNode(
@@ -602,7 +602,10 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                         vscode.TreeItemCollapsibleState.None,
                         profileId,
                         database,
-                        table
+                        table,
+                        undefined,
+                        undefined,
+                        item.name
                     );
                 }
 
@@ -613,7 +616,10 @@ export class ModelTreeProvider implements vscode.TreeDataProvider<ModelNode> {
                         vscode.TreeItemCollapsibleState.None,
                         profileId,
                         database,
-                        table
+                        table,
+                        undefined,
+                        undefined,
+                        item.name
                     );
                 }
 

@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.6] - 2026-03-18
+
+### Changed
+- Interactive Azure authentication now attempts silent token acquisition first, reducing repeated browser prompts for previously signed-in users.
+
+### Fixed
+- Foldered column/measure labels no longer use leading-space indentation that could leak into object lookup names.
+- Operations that rely on object names (including delete/edit flows) now consistently use raw model object names for foldered items.
+
 ## [0.1.5] - 2026-03-18
 
 ### Added
