@@ -106,10 +106,10 @@ Run extension in dev host:
 ## Changelog
 
 - Full release history: [CHANGELOG.md](CHANGELOG.md)
-- Latest release: `0.1.5`
-	- Added create flows for data/calculated columns and measures
-	- Added delete for columns/measures from tree and Properties view
-	- Improved sidecar endpoint parity and API error diagnostics
+- Latest release: `0.1.6`
+	- Improved interactive Azure auth by attempting silent token acquisition before prompting in browser
+	- Fixed foldered column/measure name handling to preserve raw object names for operations
+	- Resolved object lookup reliability issues in delete/edit flows for foldered items
 
 ## License
 
