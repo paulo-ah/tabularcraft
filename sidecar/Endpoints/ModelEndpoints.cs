@@ -32,6 +32,19 @@ public static class ModelEndpoints
             }
         });
 
+        app.MapPost("/model/delete", (DeleteObjectRequest request, AasConnectionService svc) =>
+        {
+            try
+            {
+                svc.DeleteObject(request);
+                return Results.Ok(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(ex.Message);
+            }
+        });
+
         app.MapPost("/model/properties/get", (GetObjectPropertiesRequest request, AasConnectionService svc) =>
         {
             try
@@ -49,6 +62,32 @@ public static class ModelEndpoints
             try
             {
                 svc.UpdateObjectProperties(request);
+                return Results.Ok(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(ex.Message);
+            }
+        });
+
+        app.MapPost("/model/columns/data/create", (CreateDataColumnRequest request, AasConnectionService svc) =>
+        {
+            try
+            {
+                svc.CreateDataColumn(request);
+                return Results.Ok(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(ex.Message);
+            }
+        });
+
+        app.MapPost("/model/columns/calculated/create", (CreateCalculatedColumnRequest request, AasConnectionService svc) =>
+        {
+            try
+            {
+                svc.CreateCalculatedColumn(request);
                 return Results.Ok(new { success = true });
             }
             catch (Exception ex)

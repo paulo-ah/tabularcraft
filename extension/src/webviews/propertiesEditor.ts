@@ -4,6 +4,7 @@ import {
     ObjectPropertiesRequest,
     UpdateObjectPropertiesRequest,
     ObjectPropertyInfo,
+  DeleteObjectRequest,
 } from '../connectionManager';
 import { ModelNode } from '../providers/modelTreeProvider';
 
@@ -24,6 +25,8 @@ const inspectableKinds = new Set([
     'data-source',
     'culture',
 ]);
+
+  const deletableKinds = new Set(['column', 'measure']);
 
 export async function openPropertiesEditor(
     context: vscode.ExtensionContext,
@@ -51,9 +54,55 @@ export async function openPropertiesEditor(
 
         panel.webview.onDidReceiveMessage(
             async (message: { command: string; updates?: Array<{ name: string; value: string }> }) => {
-                if (message.command !== 'save' || !currentNode) {
+            if (!currentNode) {
                     return;
                 }
+
+            if (message.command === 'delete') {
+              if (!deletableKinds.has(currentNode.kind)) {
+                panel!.webview.postMessage({
+                  command: 'error',
+                  message: `Delete is not supported for ${currentNode.kind}.`,
+                });
+                return;
+              }
+
+              const confirm = await vscode.window.showWarningMessage(
+                `Delete ${humanizeKind(currentNode.kind)} '${currentNode.objectName}'?`,
+                { modal: true },
+                'Delete'
+              );
+
+              if (confirm !== 'Delete') {
+                panel!.webview.postMessage({ command: 'error', message: 'Delete cancelled.' });
+                return;
+              }
+
+              const deleteRequest: DeleteObjectRequest = {
+                database: currentNode.database!,
+                objectType: currentNode.kind,
+                objectName: currentNode.objectName,
+                table: currentNode.table,
+                hierarchy: currentNode.hierarchy,
+              };
+
+              try {
+                await connectionManager.deleteObject(deleteRequest);
+                panel!.webview.postMessage({ command: 'deleted' });
+                vscode.commands.executeCommand('tabularcraft.refreshTree');
+                return;
+              } catch (err) {
+                panel!.webview.postMessage({
+                  command: 'error',
+                  message: err instanceof Error ? err.message : String(err),
+                });
+                return;
+              }
+            }
+
+            if (message.command !== 'save') {
+              return;
+            }
 
                 const updateRequest: UpdateObjectPropertiesRequest = {
                     database: currentNode.database!,
@@ -101,6 +150,7 @@ export async function openPropertiesEditor(
 function buildHtml(node: ModelNode, properties: ObjectPropertyInfo[]): string {
     const title = `${humanizeKind(node.kind)} - ${node.objectName}`;
     const propsJson = JSON.stringify(properties);
+  const showDelete = deletableKinds.has(node.kind);
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -120,6 +170,7 @@ function buildHtml(node: ModelNode, properties: ObjectPropertyInfo[]): string {
   .actions { margin-top: 14px; display: flex; gap: 8px; }
   button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 6px 12px; cursor: pointer; }
   button:hover { background: var(--vscode-button-hoverBackground); }
+  .danger { background: var(--vscode-inputValidation-errorBackground); color: var(--vscode-inputValidation-errorForeground); }
   #status { margin-top: 10px; min-height: 18px; }
   .ok { color: var(--vscode-testing-iconPassed); }
   .err { color: var(--vscode-inputValidation-errorForeground); }
@@ -130,6 +181,7 @@ function buildHtml(node: ModelNode, properties: ObjectPropertyInfo[]): string {
   <div class="grid" id="props"></div>
   <div class="actions">
     <button onclick="save()">Save Properties</button>
+    ${showDelete ? '<button class="danger" onclick="del()">Delete</button>' : ''}
   </div>
   <div id="status"></div>
 <script>
@@ -218,6 +270,12 @@ function save() {
   vscode.postMessage({ command: 'save', updates });
 }
 
+function del() {
+  document.getElementById('status').textContent = 'Deleting...';
+  document.getElementById('status').className = '';
+  vscode.postMessage({ command: 'delete' });
+}
+
 function validateProperty(name, type, required, enumValues, value) {
   const trimmed = value.trim();
 
@@ -268,6 +326,10 @@ window.addEventListener('message', (event) => {
   if (msg.command === 'error') {
     status.textContent = msg.message;
     status.className = 'err';
+  }
+  if (msg.command === 'deleted') {
+    status.textContent = 'Deleted.';
+    status.className = 'ok';
   }
 });
 

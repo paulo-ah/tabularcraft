@@ -2,7 +2,7 @@
   "name": "tabularcraft",
   "displayName": "Tabularcraft",
   "description": "Manage Azure Analysis Services tabular models from VS Code",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "publisher": "maersk-pda",
   "icon": "resources/icon.png",
   "license": "AGPL-3.0-or-later",
@@ -26,10 +26,14 @@
     "onCommand:tabularcraft.processAdd",
     "onCommand:tabularcraft.openPartitionQuery",
     "onCommand:tabularcraft.openMeasureEditor",
+    "onCommand:tabularcraft.createNewMeasure",
+    "onCommand:tabularcraft.createNewDataColumn",
+    "onCommand:tabularcraft.createNewCalculatedColumn",
     "onCommand:tabularcraft.connectionNodeConnect",
     "onCommand:tabularcraft.connectionNodeEdit",
     "onCommand:tabularcraft.connectionNodeDelete",
     "onCommand:tabularcraft.renameObject",
+    "onCommand:tabularcraft.deleteObject",
     "onCommand:tabularcraft.openProperties",
     "onCommand:tabularcraft.openTmslConsole"
   ],
@@ -91,6 +95,24 @@
         "icon": "$(symbol-function)"
       },
       {
+        "command": "tabularcraft.createNewMeasure",
+        "title": "Create New Measure",
+        "category": "Tabularcraft",
+        "icon": "$(add)"
+      },
+      {
+        "command": "tabularcraft.createNewDataColumn",
+        "title": "Create New Data Column",
+        "category": "Tabularcraft",
+        "icon": "$(add)"
+      },
+      {
+        "command": "tabularcraft.createNewCalculatedColumn",
+        "title": "Create New Calculated Column",
+        "category": "Tabularcraft",
+        "icon": "$(symbol-field)"
+      },
+      {
         "command": "tabularcraft.connectionNodeConnect",
         "title": "Connect",
         "category": "Tabularcraft",
@@ -113,6 +135,12 @@
         "title": "Rename",
         "category": "Tabularcraft",
         "icon": "$(edit)"
+      },
+      {
+        "command": "tabularcraft.deleteObject",
+        "title": "Delete",
+        "category": "Tabularcraft",
+        "icon": "$(trash)"
       },
       {
         "command": "tabularcraft.openProperties",
@@ -185,6 +213,21 @@
           "group": "measures"
         },
         {
+          "command": "tabularcraft.createNewMeasure",
+          "when": "view == tabularcraft.modelTree && viewItem == measures-group",
+          "group": "navigation"
+        },
+        {
+          "command": "tabularcraft.createNewDataColumn",
+          "when": "view == tabularcraft.modelTree && viewItem == columns-group",
+          "group": "navigation"
+        },
+        {
+          "command": "tabularcraft.createNewCalculatedColumn",
+          "when": "view == tabularcraft.modelTree && viewItem == columns-group",
+          "group": "navigation"
+        },
+        {
           "command": "tabularcraft.processPartition",
           "when": "view == tabularcraft.modelTree && viewItem == partition",
           "group": "process"
@@ -202,6 +245,11 @@
         {
           "command": "tabularcraft.renameObject",
           "when": "view == tabularcraft.modelTree && (viewItem == database || viewItem == table || viewItem == column || viewItem == measure || viewItem == hierarchy || viewItem == level || viewItem == partition || viewItem == role || viewItem == perspective || viewItem == data-source || viewItem == culture)",
+          "group": "navigation"
+        },
+        {
+          "command": "tabularcraft.deleteObject",
+          "when": "view == tabularcraft.modelTree && (viewItem == column || viewItem == measure)",
           "group": "navigation"
         },
         {

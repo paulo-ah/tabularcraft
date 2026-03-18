@@ -372,6 +372,41 @@ public sealed class AasConnectionService : IDisposable
         }
     }
 
+    public void DeleteObject(DeleteObjectRequest request)
+    {
+        lock (_lock)
+        {
+            var db = GetDatabase(request.Database);
+            var model = db.Model ?? throw new InvalidOperationException("Model metadata is not available.");
+            var objectType = request.ObjectType.Trim().ToLowerInvariant();
+            var objectName = request.ObjectName.Trim();
+
+            switch (objectType)
+            {
+                case "column":
+                {
+                    var table = GetTable(request.Database, RequireValue(request.Table, "Table"));
+                    var column = table.Columns.Find(objectName)
+                        ?? throw new InvalidOperationException($"Column '{objectName}' not found in table '{table.Name}'.");
+                    table.Columns.Remove(column);
+                    break;
+                }
+                case "measure":
+                {
+                    var table = GetTable(request.Database, RequireValue(request.Table, "Table"));
+                    var measure = table.Measures.Find(objectName)
+                        ?? throw new InvalidOperationException($"Measure '{objectName}' not found in table '{table.Name}'.");
+                    table.Measures.Remove(measure);
+                    break;
+                }
+                default:
+                    throw new InvalidOperationException($"Delete for object type '{request.ObjectType}' is not supported.");
+            }
+
+            model.SaveChanges();
+        }
+    }
+
     public List<ObjectPropertyDto> GetObjectProperties(GetObjectPropertiesRequest request)
     {
         lock (_lock)
@@ -495,6 +530,74 @@ public sealed class AasConnectionService : IDisposable
                 ?? throw new InvalidOperationException($"Measure '{measureName}' not found.");
             tbl.Measures.Remove(m);
             tbl.Model.SaveChanges();
+        }
+    }
+
+    public void CreateDataColumn(CreateDataColumnRequest request)
+    {
+        lock (_lock)
+        {
+            var table = GetTable(request.Database, request.Table);
+            var name = RequireValue(request.Name, "Name");
+
+            if (table.Columns.Find(name) is not null)
+            {
+                throw new InvalidOperationException($"Column '{name}' already exists in table '{table.Name}'.");
+            }
+
+            var column = new DataColumn
+            {
+                Name = name,
+                SourceColumn = RequireValue(request.SourceColumn, "SourceColumn"),
+                DataType = ParseDataType(request.DataType),
+            };
+
+            if (!string.IsNullOrWhiteSpace(request.DisplayFolder))
+            {
+                column.DisplayFolder = request.DisplayFolder.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.FormatString))
+            {
+                column.FormatString = request.FormatString.Trim();
+            }
+
+            table.Columns.Add(column);
+            table.Model.SaveChanges();
+        }
+    }
+
+    public void CreateCalculatedColumn(CreateCalculatedColumnRequest request)
+    {
+        lock (_lock)
+        {
+            var table = GetTable(request.Database, request.Table);
+            var name = RequireValue(request.Name, "Name");
+
+            if (table.Columns.Find(name) is not null)
+            {
+                throw new InvalidOperationException($"Column '{name}' already exists in table '{table.Name}'.");
+            }
+
+            var column = new CalculatedColumn
+            {
+                Name = name,
+                Expression = RequireValue(request.Expression, "Expression"),
+                DataType = ParseDataType(request.DataType),
+            };
+
+            if (!string.IsNullOrWhiteSpace(request.DisplayFolder))
+            {
+                column.DisplayFolder = request.DisplayFolder.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.FormatString))
+            {
+                column.FormatString = request.FormatString.Trim();
+            }
+
+            table.Columns.Add(column);
+            table.Model.SaveChanges();
         }
     }
 
@@ -775,6 +878,21 @@ public sealed class AasConnectionService : IDisposable
         if (string.IsNullOrWhiteSpace(value))
             throw new InvalidOperationException($"{name} is required.");
         return value.Trim();
+    }
+
+    private static Microsoft.AnalysisServices.Tabular.DataType ParseDataType(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return Microsoft.AnalysisServices.Tabular.DataType.String;
+        }
+
+        if (!Enum.TryParse<Microsoft.AnalysisServices.Tabular.DataType>(raw.Trim(), ignoreCase: true, out var dataType))
+        {
+            throw new InvalidOperationException($"DataType '{raw}' is not valid.");
+        }
+
+        return dataType;
     }
 
     private static string RequireTable(RenameObjectRequest request)

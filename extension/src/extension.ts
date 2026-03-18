@@ -6,7 +6,9 @@ import { registerConnectCommands } from './commands/connect';
 import { registerConnectionNodeCommands } from './commands/connections';
 import { registerProcessCommands } from './commands/process';
 import { registerMeasureCommands } from './commands/measures';
+import { registerColumnCommands } from './commands/columns';
 import { registerRenameCommands } from './commands/rename';
+import { registerDeleteCommands } from './commands/delete';
 import { openTmslConsole } from './webviews/tmslConsole';
 import { ModelNode } from './providers/modelTreeProvider';
 import { openPropertiesEditor } from './webviews/propertiesEditor';
@@ -100,7 +102,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         registerConnectionNodeCommands(context, connectionManager, treeProvider, profileStore);
         registerProcessCommands(context, connectionManager);
         registerMeasureCommands(context, connectionManager);
+        registerColumnCommands(context, connectionManager);
         registerRenameCommands(context, connectionManager, treeProvider);
+        registerDeleteCommands(context, connectionManager, treeProvider);
 
         context.subscriptions.push(
             treeView,

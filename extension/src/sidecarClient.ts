@@ -15,12 +15,12 @@ export class SidecarClient {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         });
-        return this.handleResponse<T>(response);
+        return this.handleResponse<T>(response, `POST ${path}`);
     }
 
     async get<T>(path: string): Promise<T> {
         const response = await fetch(`${this.baseUrl}${path}`);
-        return this.handleResponse<T>(response);
+        return this.handleResponse<T>(response, `GET ${path}`);
     }
 
     async delete(path: string): Promise<void> {
@@ -31,10 +31,11 @@ export class SidecarClient {
         }
     }
 
-    private async handleResponse<T>(response: Response): Promise<T> {
+    private async handleResponse<T>(response: Response, operation: string): Promise<T> {
         if (!response.ok) {
-            const text = await response.text().catch(() => response.statusText);
-            throw new Error(text);
+            const text = (await response.text().catch(() => response.statusText)).trim();
+            const message = text || `${operation} failed with ${response.status} ${response.statusText}`;
+            throw new Error(message);
         }
         return response.json() as Promise<T>;
     }

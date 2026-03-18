@@ -75,6 +75,14 @@ export interface RenameObjectRequest {
     hierarchy?: string;
 }
 
+export interface DeleteObjectRequest {
+    database: string;
+    objectType: string;
+    objectName: string;
+    table?: string;
+    hierarchy?: string;
+}
+
 export interface ObjectPropertiesRequest {
     database: string;
     objectType: string;
@@ -105,6 +113,26 @@ export interface PartitionQueryInfo {
     query: string;
     queryType: string;
     editable: boolean;
+}
+
+export interface CreateDataColumnRequest {
+    database: string;
+    table: string;
+    name: string;
+    sourceColumn: string;
+    dataType: string;
+    displayFolder?: string;
+    formatString?: string;
+}
+
+export interface CreateCalculatedColumnRequest {
+    database: string;
+    table: string;
+    name: string;
+    expression: string;
+    dataType: string;
+    displayFolder?: string;
+    formatString?: string;
 }
 
 /**
@@ -191,6 +219,16 @@ export class ConnectionManager {
         await this.client!.post('/process/partition/query/update', { database, table, partition, query });
     }
 
+    async createDataColumn(request: CreateDataColumnRequest): Promise<void> {
+        this.assertConnected();
+        await this.client!.post('/model/columns/data/create', request);
+    }
+
+    async createCalculatedColumn(request: CreateCalculatedColumnRequest): Promise<void> {
+        this.assertConnected();
+        await this.client!.post('/model/columns/calculated/create', request);
+    }
+
     async getMeasures(database: string, table: string): Promise<MeasureInfo[]> {
         this.assertConnected();
         return this.client!.get<MeasureInfo[]>(
@@ -217,6 +255,11 @@ export class ConnectionManager {
     async renameObject(request: RenameObjectRequest): Promise<void> {
         this.assertConnected();
         await this.client!.post('/model/rename', request);
+    }
+
+    async deleteObject(request: DeleteObjectRequest): Promise<void> {
+        this.assertConnected();
+        await this.client!.post('/model/delete', request);
     }
 
     async getObjectProperties(request: ObjectPropertiesRequest): Promise<ObjectPropertyInfo[]> {

@@ -160,9 +160,9 @@ export class SidecarManager {
         const dll = 'Tabularcraft.Sidecar.dll';
 
         const executableCandidates = [
-            path.join(this.extensionPath, 'sidecar', exe),
             path.resolve(this.extensionPath, '..', 'sidecar', 'bin', 'Debug', 'net8.0', exe),
             path.resolve(this.extensionPath, '..', 'sidecar', 'bin', 'Release', 'net8.0', exe),
+            path.join(this.extensionPath, 'sidecar', exe),
         ];
 
         for (const candidate of executableCandidates) {
@@ -176,9 +176,9 @@ export class SidecarManager {
         }
 
         const dllCandidates = [
-            path.join(this.extensionPath, 'sidecar', dll),
             path.resolve(this.extensionPath, '..', 'sidecar', 'bin', 'Debug', 'net8.0', dll),
             path.resolve(this.extensionPath, '..', 'sidecar', 'bin', 'Release', 'net8.0', dll),
+            path.join(this.extensionPath, 'sidecar', dll),
         ];
 
         for (const candidate of dllCandidates) {
